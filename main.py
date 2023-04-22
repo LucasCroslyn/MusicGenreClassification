@@ -26,8 +26,6 @@ PICKLE_AUDIO_FILE_PATH = "./data/AudioDataPickle.txt"
 PICKLE_MFCC_FILE_PATH = "./data/MFCCPickle.txt"
 PICKLE_EMBEDDING_FILE_PATH = "./data/EmbeddingPickle.txt"
 PICKLE_SPECTROGRAM_FILE_PATH = "./data/SpectrogramPickle.txt"
-LSTM_MODEL_PATH = "./models/LSTM.h5"
-CNN_MODEL_PATH = "./models/CNN.h5"
 SAMPLE_RATE = 16000
 NUM_MFCC = 20
 RANDOM_STATE = 1000
@@ -39,7 +37,7 @@ def read_and_save_audio() -> None:
     # Just reads in the audio data while also saving the data in a dictionary
     genre_audio_dict = dict()
     for genre in os.listdir(DATASET_PATH):
-        audio_files = list()
+        audio_files = []
         for audio_file in os.listdir(DATASET_PATH + "/" + genre):
             print(audio_file)
             # open and resample the files to 16kHz
@@ -87,7 +85,7 @@ def cal_and_save_MFCC(data: dict) -> None:
     # Defaults number of MFCCs is 20 so kept that number of them
     genre_MFCC_dict: dict = dict()
     for genre, audio in data.items():
-        MFCC_files: list = list()
+        MFCC_files = []
         for sample in audio:
             # Default matrix is num_MFCCs x time_step, want flipped so .T
             mfccs = mfcc(y=sample).T
@@ -105,8 +103,8 @@ def cal_and_save_embedding(data: dict, example_imgs: bool = False) -> None:
     genre_embeddings_dict: dict = dict()
     genre_spectrograms_dict: dict = dict()
     for genre, audio in data.items():
-        embedding_files: list = list()
-        spectrogram_files: list = list()
+        embedding_files = []
+        spectrogram_files = []
         for sample in audio:
             _, embedding, spectrogram = yamnet_model(sample)
             spectrogram = spectrogram.numpy()
@@ -160,34 +158,32 @@ def convert_data(all_data: dict) -> tuple[np.ndarray, np.ndarray]:
     return x, y
 
 
-
-def train_and_run_LSTM_model(all_train_x, all_train_y, model_file: str = LSTM_MODEL_PATH,
-                             continue_training: bool = False) -> None:
-    # Makes, trains, and evaluates the LSTM model
-
-    train_x, test_x, train_y, test_y = train_test_split(all_train_x, all_train_y, train_size=0.8,
-                                                        random_state=RANDOM_STATE)
-    print(train_y.shape)
-
-    lstm_model = LSTM(model_file if continue_training else None)
-    lstm_model.train_model(train_x, train_y, test_x, test_y, steps_per_epoch=len(train_y) // BATCH_SIZE,
-                           batch_size=BATCH_SIZE, output_file=model_file, epochs=EPOCHS)
-    predictions = lstm_model.evaluate(test_x, test_y)
-
-
-def train_and_run_CNN_model(all_train_x, all_train_y, model_file: str = CNN_MODEL_PATH,
-                            continue_training: bool = False) -> None:
+def train_run_model(model_type: str, all_train_x, all_train_y, model_file: str, plot_file: str, plot_title: str,
+                    continue_training: bool = False) -> None:
     # Makes, trains, and evaluates the CNN model
 
     train_x, test_x, train_y, test_y = train_test_split(all_train_x, all_train_y, train_size=0.8,
                                                         random_state=RANDOM_STATE)
-    print(train_y.shape)
+    if model_type == "cnn":
+        model = CNN(model_file if continue_training else None)
+        model.train_model(train_x, train_y, test_x, test_y, steps_per_epoch=len(train_y) // BATCH_SIZE,
+                          batch_size=BATCH_SIZE, epochs=EPOCHS, model_file=model_file)
+    elif model_type == "lstm":
+        model = LSTM(model_file if continue_training else None)
+        model.train_model(train_x, train_y, test_x, test_y, epochs=EPOCHS, steps_per_epoch=len(train_y) // BATCH_SIZE,
+                          batch_size=BATCH_SIZE, model_file=model_file)
+    plot_history(model.history, plot_file, plot_title)
+    predictions = model.evaluate(test_x, test_y)
 
-    cnn_model = CNN(model_file if continue_training else None)
-    cnn_model.train_model(train_x, train_y, test_x, test_y, steps_per_epoch=len(train_y) // BATCH_SIZE,
-                          batch_size=BATCH_SIZE, output_file=model_file, epochs=EPOCHS)
-    predictions = cnn_model.evaluate(test_x, test_y)
 
+def plot_history(history, plot_file: str, plot_title: str):
+    plt.plot(history.history["accuracy"])
+    plt.plot(history.history["val_accuracy"])
+    plt.title(plot_title)
+    plt.xlabel("epoch")
+    plt.ylabel("accuracy")
+    plt.legend(["train, val"], loc="bottom right")
+    plt.savefig(plot_file)
 
 
 if __name__ == '__main__':

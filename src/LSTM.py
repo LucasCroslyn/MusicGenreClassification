@@ -1,9 +1,7 @@
 import keras
 import keras.layers as layers
 import numpy as np
-import tensorflow as tf
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.utils import pad_sequences
 
 
 def read_model(model_file: str = None):
@@ -21,10 +19,10 @@ class LSTM:
                     train_y: np.ndarray,
                     test_x: np.ndarray,
                     test_y: np.ndarray,
-                    output_file: str = None,
                     epochs: int = 1,
                     steps_per_epoch: int = 5,
-                    batch_size: int = 1) -> None:
+                    batch_size: int = 1,
+                    model_file: str = None) -> None:
 
         if self.model is None:
             model = keras.Sequential()
@@ -33,20 +31,16 @@ class LSTM:
             model.add(layers.BatchNormalization())
             model.add(layers.LSTM(units=64, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
             model.add(layers.BatchNormalization())
-            model.add(layers.LSTM(units=32, dropout=0.3, recurrent_dropout=0.3))
-            model.add(layers.BatchNormalization())
-            model.add(layers.Dense(64, activation="relu"))
-            model.add(layers.Dropout(0.3))
-            model.add(layers.BatchNormalization())
             model.add(layers.Flatten())
+            model.add(layers.Dense(128, activation="relu"))
             model.add(layers.Dense(units=train_y.shape[1], activation="softmax"))
             model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
             self.model = model
 
         early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
-        if output_file is not None:
-            model_checkpoint = ModelCheckpoint(output_file, monitor='val_loss', mode='min', save_best_only=True)
+        if model_file is not None:
+            model_checkpoint = ModelCheckpoint(model_file, monitor='val_loss', mode='min', save_best_only=True)
 
         self.model.fit(train_x, train_y,
                        batch_size=batch_size,
