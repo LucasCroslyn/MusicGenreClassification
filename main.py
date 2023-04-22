@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 from sklearn.preprocessing import LabelBinarizer
 import tensorflow as tf
+import tensorflow_hub as hub
 import librosa
 from librosa.feature import mfcc
 import os
@@ -15,45 +16,60 @@ import keras
 import keras.layers as layers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
+import matplotlib.pyplot as plt
+
 from src.LSTM import LSTM
 from src.CNN import CNN
 
 DATASET_PATH = "./data/Music"
 PICKLE_AUDIO_FILE_PATH = "./data/AudioDataPickle.txt"
 PICKLE_MFCC_FILE_PATH = "./data/MFCCPickle.txt"
+PICKLE_EMBEDDING_FILE_PATH = "./data/EmbeddingPickle.txt"
+PICKLE_SPECTROGRAM_FILE_PATH = "./data/SpectrogramPickle.txt"
 LSTM_MODEL_PATH = "./models/LSTM.h5"
 CNN_MODEL_PATH = "./models/CNN.h5"
+SAMPLE_RATE = 16000
 NUM_MFCC = 20
 RANDOM_STATE = 1000
 BATCH_SIZE = 10
-EPOCHS = 100
+EPOCHS = 50
 
 
-def read_and_save_audio(audio_file_name: str = PICKLE_AUDIO_FILE_PATH) -> None:
+def read_and_save_audio() -> None:
     # Just reads in the audio data while also saving the data in a dictionary
-    genre_files = dict()
+    genre_audio_dict = dict()
     for genre in os.listdir(DATASET_PATH):
         audio_files = list()
         for audio_file in os.listdir(DATASET_PATH + "/" + genre):
             print(audio_file)
-            # open and resample the files from ~22Khz to ~11KHz.
+            # open and resample the files to 16kHz
             try:
-                audio, sample_rate = librosa.load(DATASET_PATH + "/" + genre + "/" + audio_file)
+                audio, _ = librosa.load(DATASET_PATH + "/" + genre + "/" + audio_file, sr=SAMPLE_RATE)
                 audio_files.append(audio)
             except:
                 print("File failed to resample: " + audio_file)
-        genre_files[genre] = audio_files
-    pickle_file = open(audio_file_name, "wb")
-    pickle.dump(genre_files, pickle_file)
+        genre_audio_dict[genre] = audio_files
+    pickle_file = open(PICKLE_AUDIO_FILE_PATH, "wb")
+    pickle.dump(genre_audio_dict, pickle_file)
     pickle_file.close()
 
 
-def read_saved_audio(file_name: str = PICKLE_AUDIO_FILE_PATH) -> dict:
+def read_saved_pickle(file_name: str, audio: bool = False) -> dict:
     # Loads in the saved dictionary of speaker audio data
     file = open(file_name, "rb")
     loaded_audio_data = pickle.load(file)
+    if audio:
+        pad_audio(loaded_audio_data)
     file.close()
     return loaded_audio_data
+
+
+def pad_audio(data: dict) -> dict:
+    # Need to pad the clips as they are not all exactly the same length
+    sample_length = get_max_audio_length(data)
+    for genre, genre_data in data.items():
+        data[genre] = pad_sequences(genre_data, maxlen=sample_length, dtype='float32', value=0, padding="post")
+    return data
 
 
 def get_max_audio_length(data: dict) -> int:
@@ -66,37 +82,64 @@ def get_max_audio_length(data: dict) -> int:
     return max_length
 
 
-def pad_audio(data: dict) -> dict:
-    # Need to pad the clips as they are not all exactly the same length
-    sample_length = get_max_audio_length(data)
-    for genre, genre_data in data.items():
-        data[genre] = pad_sequences(genre_data, maxlen=sample_length, dtype='float32', value=0, padding="post")
-    return data
-
-
-def cal_and_save_MFCC(audio: dict, MFCC_file_name: str = PICKLE_MFCC_FILE_PATH) -> None:
+def cal_and_save_MFCC(data: dict) -> None:
     # Calculates the MFCCs of all the audio files
     # Defaults number of MFCCs is 20 so kept that number of them
-    genre_MFCC_files = dict()
-    for genre, data in audio.items():
-        MFCC_files = list()
-        for sample in data:
+    genre_MFCC_dict: dict = dict()
+    for genre, audio in data.items():
+        MFCC_files: list = list()
+        for sample in audio:
             # Default matrix is num_MFCCs x time_step, want flipped so .T
             mfccs = mfcc(y=sample).T
             MFCC_files.append(mfccs)
-        genre_MFCC_files[genre] = MFCC_files
+        genre_MFCC_dict[genre] = MFCC_files
 
-    pickle_file = open(MFCC_file_name, "wb")
-    pickle.dump(genre_MFCC_files, pickle_file)
+    pickle_file = open(PICKLE_MFCC_FILE_PATH, "wb")
+    pickle.dump(genre_MFCC_dict, pickle_file)
     pickle_file.close()
 
 
-def read_saved_MFCC(file_name: str = PICKLE_MFCC_FILE_PATH) -> dict:
-    # Loads the saved dictionary of saved MFCC values
-    file = open(file_name, "rb")
-    loaded_MFCC_data = pickle.load(file)
-    file.close()
-    return loaded_MFCC_data
+def cal_and_save_embedding(data: dict, example_imgs: bool = False) -> None:
+    yamnet_model_handle = 'https://tfhub.dev/google/yamnet/1'
+    yamnet_model = hub.load(yamnet_model_handle)
+    genre_embeddings_dict: dict = dict()
+    genre_spectrograms_dict: dict = dict()
+    for genre, audio in data.items():
+        embedding_files: list = list()
+        spectrogram_files: list = list()
+        for sample in audio:
+            _, embedding, spectrogram = yamnet_model(sample)
+            spectrogram = spectrogram.numpy()
+            embedding = embedding.numpy()
+            spectrogram_files.append(spectrogram)
+            embedding_files.append(embedding)
+        genre_embeddings_dict[genre] = embedding_files
+        genre_spectrograms_dict[genre] = spectrogram_files
+
+    pickle_file = open(PICKLE_EMBEDDING_FILE_PATH, "wb")
+    pickle.dump(genre_embeddings_dict, pickle_file)
+    pickle_file.close()
+    pickle_file = open(PICKLE_SPECTROGRAM_FILE_PATH, "wb")
+    pickle.dump(genre_spectrograms_dict, pickle_file)
+    pickle_file.close()
+
+    if example_imgs:
+        sample = data["pop"][0]
+        _, _, spectrogram = yamnet_model(sample)
+        spectrogram = spectrogram.numpy()
+        plt.imshow(spectrogram.T, aspect="auto", origin="lower")
+        plt.title("Spectrogram For Pop Song 1")
+        plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
+                        labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+        plt.savefig("./figs/Example_spectrogram.png")
+        plt.show()
+        plt.plot(sample)
+        plt.title("Waveform For Pop Song 1")
+        plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
+                        labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+        plt.xlim([0, len(sample)])
+        plt.savefig("./figs/Example_waveform.png")
+        plt.show()
 
 
 def convert_data(all_data: dict) -> tuple[np.ndarray, np.ndarray]:
@@ -115,6 +158,7 @@ def convert_data(all_data: dict) -> tuple[np.ndarray, np.ndarray]:
     y = encoder.fit_transform(y)
     x = np.array(x)
     return x, y
+
 
 
 def train_and_run_LSTM_model(all_train_x, all_train_y, model_file: str = LSTM_MODEL_PATH,
@@ -148,17 +192,18 @@ def train_and_run_CNN_model(all_train_x, all_train_y, model_file: str = CNN_MODE
 
 if __name__ == '__main__':
     # read_and_save_audio()
-    # audio_data = read_saved_audio()
-    # audio_data = pad_audio(audio_data)
+    audio_data = read_saved_pickle(PICKLE_AUDIO_FILE_PATH, audio=True)
+    audio_data = pad_audio(audio_data)
+    cal_and_save_embedding(audio_data)
     # print(audio_data["pop"][99].shape)
     # print(audio_data["blues"][1].shape)
     # cal_and_save_MFCC(audio_data)
-    MFCCs = read_saved_MFCC()
-    print(MFCCs["pop"][99].shape)
-    print(MFCCs["blues"][99].shape)
-
-    all_x, all_y = convert_data(MFCCs)
-
-    train_x, validate_x, train_y, validate_y = train_test_split(all_x, all_y, train_size=0.8, random_state=RANDOM_STATE)
-
-    train_and_run_CNN_model(train_x, train_y)
+    # MFCCs = read_saved_pickle(PICKLE_MFCC_FILE_PATH)
+    # print(MFCCs["pop"][99].shape)
+    # print(MFCCs["blues"][99].shape)
+    #
+    # all_x, all_y = convert_data(MFCCs)
+    #
+    # train_x, validate_x, train_y, validate_y = train_test_split(all_x, all_y, train_size=0.8, random_state=RANDOM_STATE)
+    #
+    # train_and_run_CNN_model(train_x, train_y)
