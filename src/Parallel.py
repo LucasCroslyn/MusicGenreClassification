@@ -9,7 +9,7 @@ def read_model(model_file: str = None):
         return None
     return keras.models.load_model(model_file)
 
-
+# Adapted code from https://stackoverflow.com/a/55435379 for parallel model
 class Parallel:
     def __init__(self, model_file: str = None) -> None:
         self.model = read_model(model_file)
@@ -90,10 +90,36 @@ class Parallel:
             model6.add(layers.BatchNormalization())
             model6.add(layers.Flatten())
 
-            combined = layers.concatenate([model1.output, model2.output, model3.output, model4.output, model5.output, model6.output])
+            combined = layers.concatenate(
+                [model1.output, model2.output, model3.output, model4.output, model5.output, model6.output])
             x = layers.Dense(128, activation="relu")(combined)
             x = layers.Dense(units=train_y.shape[1], activation="softmax")(x)
 
-            model = keras.Model(inputs=[model1.input, model2.input, model3.input, model4.input, model5.input, model6.input])
+            model = keras.Model(
+                inputs=[model1.input, model2.input, model3.input, model4.input, model5.input, model6.input])
             model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
             self.model = model
+
+        early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+
+        if model_file is not None:
+            model_checkpoint = ModelCheckpoint(model_file, monitor="val_loss", mode="min", save_best_only=True)
+
+        self.history = self.model.fit(x=[train_x_MFCC, train_x_embedding, train_x_spectrogram,
+                                         train_x_MFCC, train_x_embedding, train_x_spectrogram],
+                                      y=train_y,
+                                      batch_size=batch_size,
+                                      validation_data=([test_x_MFCC, test_x_embedding, test_x_spectrogram,
+                                                        test_x_MFCC, test_x_embedding, test_x_spectrogram], test_y),
+                                      validation_batch_size=batch_size,
+                                      epochs=epochs,
+                                      steps_per_epoch=steps_per_epoch,
+                                      verbose=1,
+                                      use_multiprocessing=True,
+                                      callbacks=[early_stopping, model_checkpoint])
+
+    def evaluate(self, x, y: np.ndarray, batch_size: int = 10) -> float:
+        return self.model.evaluate(x=x, y=y, batch_size=batch_size)
+
+    def predict(self, audio_data: np.ndarray, batch_size: int = 10) -> np.ndarray:
+        return self.model.predict(audio_data, batch_size=batch_size)

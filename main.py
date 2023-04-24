@@ -12,10 +12,6 @@ import os
 
 from keras.utils import pad_sequences
 
-import keras
-import keras.layers as layers
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-
 import matplotlib.pyplot as plt
 
 from src.LSTM import LSTM
@@ -80,7 +76,7 @@ def get_max_audio_length(data: dict) -> int:
     return max_length
 
 
-def cal_and_save_MFCC(data: dict) -> None:
+def cal_and_save_MFCC(data: dict, example_img: bool = False) -> None:
     # Calculates the MFCCs of all the audio files
     # Defaults number of MFCCs is 20 so kept that number of them
     genre_MFCC_dict: dict = dict()
@@ -88,7 +84,7 @@ def cal_and_save_MFCC(data: dict) -> None:
         MFCC_files = []
         for sample in audio:
             # Default matrix is num_MFCCs x time_step, want flipped so .T
-            mfccs = mfcc(y=sample).T
+            mfccs = mfcc(y=sample, sr=SAMPLE_RATE).T
             MFCC_files.append(mfccs)
         genre_MFCC_dict[genre] = MFCC_files
 
@@ -96,8 +92,20 @@ def cal_and_save_MFCC(data: dict) -> None:
     pickle.dump(genre_MFCC_dict, pickle_file)
     pickle_file.close()
 
+    if example_img:
+        mfccs = genre_MFCC_dict["pop"][0]
+        plt.imshow(mfccs, aspect="auto", origin="lower")
+        plt.title("MFCCs of Pop Song 1")
+        plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
+                        labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+        plt.savefig("./figs/Example_mfcc.png")
+        plt.xlabel("Time")
+        plt.ylabel("MFCC")
+        plt.show()
+
 
 def cal_and_save_embedding(data: dict, example_imgs: bool = False) -> None:
+    # Adapted code from https://keras.io/examples/audio/uk_ireland_accent_recognition/
     yamnet_model_handle = 'https://tfhub.dev/google/yamnet/1'
     yamnet_model = hub.load(yamnet_model_handle)
     genre_embeddings_dict: dict = dict()
@@ -109,6 +117,8 @@ def cal_and_save_embedding(data: dict, example_imgs: bool = False) -> None:
             _, embedding, spectrogram = yamnet_model(sample)
             spectrogram = spectrogram.numpy()
             embedding = embedding.numpy()
+            print(embedding.shape)
+            print(spectrogram.shape)
             spectrogram_files.append(spectrogram)
             embedding_files.append(embedding)
         genre_embeddings_dict[genre] = embedding_files
@@ -123,20 +133,33 @@ def cal_and_save_embedding(data: dict, example_imgs: bool = False) -> None:
 
     if example_imgs:
         sample = data["pop"][0]
-        _, _, spectrogram = yamnet_model(sample)
-        spectrogram = spectrogram.numpy()
+        embedding = genre_embeddings_dict["pop"][0]
+        spectrogram = genre_spectrograms_dict["pop"][0]
         plt.imshow(spectrogram.T, aspect="auto", origin="lower")
-        plt.title("Spectrogram For Pop Song 1")
+        plt.title("Spectrogram of Pop Song 1")
         plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
                         labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+        plt.xlabel("Time")
+        plt.ylabel("Frequency")
         plt.savefig("./figs/Example_spectrogram.png")
         plt.show()
         plt.plot(sample)
-        plt.title("Waveform For Pop Song 1")
+        plt.title("Waveform of Pop Song 1")
         plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
                         labelbottom=False, labeltop=False, labelleft=False, labelright=False)
         plt.xlim([0, len(sample)])
+        plt.xlabel("Time")
+        plt.ylabel("Amplitude")
         plt.savefig("./figs/Example_waveform.png")
+        plt.show()
+
+        plt.imshow(embedding.T, aspect="auto", origin="lower")
+        plt.title("Embedding for Pop Song 1")
+        plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
+                        labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+        plt.xlabel("Time")
+        plt.ylabel("Embedding Value")
+        plt.savefig("./figs/Example_embedding.png")
         plt.show()
 
 
@@ -172,6 +195,7 @@ def train_run_model(model_type: str, all_train_x, all_train_y, model_file: str, 
         model = LSTM(model_file if continue_training else None)
         model.train_model(train_x, train_y, test_x, test_y, epochs=EPOCHS, steps_per_epoch=len(train_y) // BATCH_SIZE,
                           batch_size=BATCH_SIZE, model_file=model_file)
+
     plot_history(model.history, plot_file, plot_title)
     predictions = model.evaluate(test_x, test_y)
 
@@ -190,7 +214,10 @@ if __name__ == '__main__':
     # read_and_save_audio()
     audio_data = read_saved_pickle(PICKLE_AUDIO_FILE_PATH, audio=True)
     audio_data = pad_audio(audio_data)
+    # print(audio_data["pop"][0].shape)
+    # print(audio_data["pop"][0].shape[0] / SAMPLE_RATE)
     cal_and_save_embedding(audio_data)
+    # cal_and_save_embedding(audio_data)
     # print(audio_data["pop"][99].shape)
     # print(audio_data["blues"][1].shape)
     # cal_and_save_MFCC(audio_data)
