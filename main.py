@@ -32,6 +32,8 @@ EPOCHS = 50
 def read_and_save_audio() -> None:
     # Just reads in the audio data while also saving the data in a dictionary
     genre_audio_dict = dict()
+    # Make ~30s audio files into ~3s audio files
+    samples_per_file = int((SAMPLE_RATE*30)/10)
     for genre in os.listdir(DATASET_PATH):
         audio_files = []
         for audio_file in os.listdir(DATASET_PATH + "/" + genre):
@@ -39,7 +41,9 @@ def read_and_save_audio() -> None:
             # open and resample the files to 16kHz
             try:
                 audio, _ = librosa.load(DATASET_PATH + "/" + genre + "/" + audio_file, sr=SAMPLE_RATE)
-                audio_files.append(audio)
+                for n in range(10):
+                    short_sample = audio[samples_per_file*n: samples_per_file*(n+1)]
+                    audio_files.append(short_sample)
             except:
                 print("File failed to resample: " + audio_file)
         genre_audio_dict[genre] = audio_files
