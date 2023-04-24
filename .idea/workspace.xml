@@ -4,12 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="45bd9800-7327-4013-a25f-c3c4b3cb8c6e" name="Changes" comment="Yamnet Embeddings">
-      <change afterPath="$PROJECT_DIR$/src/Parallel.py" afterDir="false" />
+    <list default="true" id="45bd9800-7327-4013-a25f-c3c4b3cb8c6e" name="Changes" comment="Parallel model plus some other fixes and minor changes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/CNN.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/CNN.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/LSTM.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/LSTM.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Parallel.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/Parallel.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -115,7 +114,14 @@
       <option name="project" value="LOCAL" />
       <updated>1682192400257</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Parallel model plus some other fixes and minor changes">
+      <created>1682197465328</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1682197465328</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -135,6 +141,7 @@
     </ignored-roots>
     <MESSAGE value="First commit" />
     <MESSAGE value="Yamnet Embeddings" />
-    <option name="LAST_COMMIT_MESSAGE" value="Yamnet Embeddings" />
+    <MESSAGE value="Parallel model plus some other fixes and minor changes" />
+    <option name="LAST_COMMIT_MESSAGE" value="Parallel model plus some other fixes and minor changes" />
   </component>
 </project>
