@@ -29,10 +29,10 @@ BATCH_SIZE = 10
 EPOCHS = 50
 
 
-def read_and_save_audio() -> None:
+def read_and_save_audio(shorter_samples: bool = True) -> None:
     # Just reads in the audio data while also saving the data in a dictionary
     genre_audio_dict = dict()
-    # Make ~30s audio files into ~3s audio files
+    # Make ~30s audio files into ~3s audio files if shorter_samples is True
     samples_per_file = int((SAMPLE_RATE*30)/10)
     for genre in os.listdir(DATASET_PATH):
         audio_files = []
@@ -41,9 +41,12 @@ def read_and_save_audio() -> None:
             # open and resample the files to 16kHz
             try:
                 audio, _ = librosa.load(DATASET_PATH + "/" + genre + "/" + audio_file, sr=SAMPLE_RATE)
-                for n in range(10):
-                    short_sample = audio[samples_per_file*n: samples_per_file*(n+1)]
-                    audio_files.append(short_sample)
+                if shorter_samples:
+                    for n in range(10):
+                        short_sample = audio[samples_per_file*n: samples_per_file*(n+1)]
+                        audio_files.append(short_sample)
+                elif not shorter_samples:
+                    audio_files.append(audio)
             except:
                 print("File failed to resample: " + audio_file)
         genre_audio_dict[genre] = audio_files
@@ -215,12 +218,12 @@ def plot_history(history, plot_file: str, plot_title: str):
 
 
 if __name__ == '__main__':
-    # read_and_save_audio()
+    read_and_save_audio()
     audio_data = read_saved_pickle(PICKLE_AUDIO_FILE_PATH, audio=True)
     audio_data = pad_audio(audio_data)
-    # print(audio_data["pop"][0].shape)
-    # print(audio_data["pop"][0].shape[0] / SAMPLE_RATE)
-    cal_and_save_embedding(audio_data)
+    print(audio_data["pop"][0].shape)
+    print(audio_data["pop"][0].shape[0] / SAMPLE_RATE)
+    # cal_and_save_embedding(audio_data)
     # cal_and_save_embedding(audio_data)
     # print(audio_data["pop"][99].shape)
     # print(audio_data["blues"][1].shape)
