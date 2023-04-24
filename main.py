@@ -94,7 +94,7 @@ def cal_and_save_MFCC(data: dict, example_img: bool = False) -> None:
 
     if example_img:
         mfccs = genre_MFCC_dict["pop"][0]
-        plt.imshow(mfccs, aspect="auto", origin="lower")
+        plt.imshow(mfccs.T, aspect="auto", origin="lower")
         plt.title("MFCCs of Pop Song 1")
         plt.tick_params(which="both", bottom=False, top=False, left=False, right=False,
                         labelbottom=False, labeltop=False, labelleft=False, labelright=False)
