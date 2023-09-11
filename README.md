@@ -17,6 +17,8 @@ The dataset that I am utilizing for this project is the GTZAN dataset which incl
 
 I am using the dataset through https://www.kaggle.com/carlthome/gtzan-genre-collection where each sample file is in .au file format to save on storage space since .au files are lower quality when compared to a .wav format for example.
 
+The dataset should be saved in the data/Music folder with each genre having its own folder containing the samples. The data was not put into this repository due to constraints. 
+
 ## Preprocessing
 ### Waveforms
 Load the samples with a sample rate of 16kHz. Since the samples were 30s long, break them into smaller sizes so the models could have an easier time with them. Broke the samples from ~30s into ~3s long samples approximately. The samples weren’t all evenly divisible into 10 smaller samples, so some data loss. Also, the samples were not all exactly the same size so I decided to pad the shorter sample with 0s so they will all be the same size for later. After padding, I had 48000 amplitude values per small sample
