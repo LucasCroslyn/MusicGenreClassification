@@ -106,10 +106,9 @@ class Parallel:
             model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
             self.model = model
 
-        early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+        # early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
-        if model_file is not None:
-            model_checkpoint = ModelCheckpoint(model_file, monitor="val_loss", mode="min", save_best_only=True)
+        model_checkpoint = ModelCheckpoint(model_file, monitor="val_loss", mode="min", save_best_only=True)
 
         self.history = self.model.fit(x=[train_x_MFCC, train_x_spectrogram, train_x_embedding,
                                          train_x_MFCC, train_x_spectrogram, train_x_embedding],
@@ -122,7 +121,8 @@ class Parallel:
                                       steps_per_epoch=steps_per_epoch,
                                       verbose=1,
                                       use_multiprocessing=True,
-                                      callbacks=[early_stopping, model_checkpoint])
+                                      #  callbacks=[early_stopping, model_checkpoint])
+                                      callbacks=[model_checkpoint])
 
     def evaluate(self, x, y: np.ndarray, batch_size: int = 10) -> float:
         return self.model.evaluate(x=x, y=y, batch_size=batch_size)

@@ -59,8 +59,7 @@ class CNN:
 
         # early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
-        if model_file is not None:
-            model_checkpoint = ModelCheckpoint(model_file, monitor='val_loss', mode='min', save_best_only=True)
+        model_checkpoint = ModelCheckpoint(model_file, monitor='val_loss', mode='min', save_best_only=True)
 
         self.history = self.model.fit(train_x, train_y,
                                  batch_size=batch_size,
