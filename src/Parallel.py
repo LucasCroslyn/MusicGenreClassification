@@ -1,6 +1,7 @@
+import numpy as np
 import keras
 import keras.layers as layers
-import numpy as np
+from keras.regularizers import l2
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 
@@ -17,8 +18,8 @@ class Parallel:
 
     def train_model(self,
                     train_x_MFCC: np.ndarray,
-                    train_x_embedding: np.ndarray,
                     train_x_spectrogram: np.ndarray,
+                    train_x_embedding: np.ndarray,
                     train_y: np.ndarray,
                     test_x_MFCC: np.ndarray,
                     test_x_embedding: np.ndarray,
@@ -32,61 +33,66 @@ class Parallel:
         if self.model is None:
             model1 = keras.Sequential()
             model1.add(layers.Input(shape=(train_x_MFCC.shape[1], train_x_MFCC.shape[2], 1)))
-            model1.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding="valid"))
+            model1.add(layers.Conv2D(32, (3, 3), activation='relu', padding="same"))
             model1.add(layers.BatchNormalization())
             model1.add(layers.MaxPooling2D())
             model1.add(layers.Dropout(0.3))
-            model1.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='valid'))
+            model1.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
             model1.add(layers.BatchNormalization())
             model1.add(layers.MaxPooling2D())
             model1.add(layers.Dropout(0.3))
+            model1.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
+            model1.add(layers.BatchNormalization())
+            model1.add(layers.MaxPooling2D())
             model1.add(layers.Flatten())
 
             model2 = keras.Sequential()
-            model2.add(layers.Input(shape=(train_x_embedding.shape[1], train_x_embedding.shape[2], 1)))
-            model2.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding="valid"))
+            model2.add(layers.Input(shape=(train_x_spectrogram.shape[1], train_x_spectrogram.shape[2], 1)))
+            model2.add(layers.Conv2D(32, (3, 3), activation='relu', padding="same"))
             model2.add(layers.BatchNormalization())
             model2.add(layers.MaxPooling2D())
             model2.add(layers.Dropout(0.3))
-            model2.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='valid'))
+            model2.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
             model2.add(layers.BatchNormalization())
             model2.add(layers.MaxPooling2D())
             model2.add(layers.Dropout(0.3))
+            model2.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
+            model2.add(layers.BatchNormalization())
+            model2.add(layers.MaxPooling2D())
             model2.add(layers.Flatten())
 
             model3 = keras.Sequential()
-            model3.add(layers.Input(shape=(train_x_spectrogram.shape[1], train_x_spectrogram.shape[2], 1)))
-            model3.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding="valid"))
+            model3.add(layers.Input(shape=(train_x_embedding.shape[1], train_x_embedding.shape[2])))
+            model3.add(layers.Conv1D(filters=64, kernel_size=5, activation='relu', padding="same"))
             model3.add(layers.BatchNormalization())
-            model3.add(layers.MaxPooling2D())
+            model3.add(layers.MaxPooling1D())
             model3.add(layers.Dropout(0.3))
-            model3.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='valid'))
+            model3.add(layers.Conv1D(filters=128, kernel_size=3, activation='relu', padding='same'))
             model3.add(layers.BatchNormalization())
-            model3.add(layers.MaxPooling2D())
-            model3.add(layers.Dropout(0.3))
+            model3.add(layers.MaxPooling1D())
             model3.add(layers.Flatten())
 
             model4 = keras.Sequential()
             model4.add(layers.Input(shape=(train_x_MFCC.shape[1], train_x_MFCC.shape[2])))
-            model4.add(layers.LSTM(units=128, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
+            model4.add(layers.Bidirectional(layers.LSTM(units=128, dropout=0.3, kernel_regularizer=l2(0.01), return_sequences=True)))
             model4.add(layers.BatchNormalization())
-            model4.add(layers.LSTM(units=64, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
+            model4.add(layers.Bidirectional(layers.LSTM(units=64, dropout=0.3, kernel_regularizer=l2(0.01))))
             model4.add(layers.BatchNormalization())
             model4.add(layers.Flatten())
 
             model5 = keras.Sequential()
-            model5.add(layers.Input(shape=(train_x_MFCC.shape[1], train_x_MFCC.shape[2])))
-            model5.add(layers.LSTM(units=128, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
+            model5.add(layers.Input(shape=(train_x_spectrogram.shape[1], train_x_spectrogram.shape[2])))
+            model5.add(layers.Bidirectional(layers.LSTM(units=128, dropout=0.3, kernel_regularizer=l2(0.01), return_sequences=True)))
             model5.add(layers.BatchNormalization())
-            model5.add(layers.LSTM(units=64, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
+            model5.add(layers.Bidirectional(layers.LSTM(units=64, dropout=0.3, kernel_regularizer=l2(0.01))))
             model5.add(layers.BatchNormalization())
             model5.add(layers.Flatten())
 
             model6 = keras.Sequential()
-            model6.add(layers.Input(shape=(train_x_MFCC.shape[1], train_x_MFCC.shape[2])))
-            model6.add(layers.LSTM(units=128, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
+            model6.add(layers.Input(shape=(train_x_embedding.shape[1], train_x_embedding.shape[2])))
+            model6.add(layers.Bidirectional(layers.LSTM(units=128, dropout=0.3, kernel_regularizer=l2(0.01), return_sequences=True)))
             model6.add(layers.BatchNormalization())
-            model6.add(layers.LSTM(units=64, dropout=0.3, recurrent_dropout=0.3, return_sequences=True))
+            model6.add(layers.Bidirectional(layers.LSTM(units=64, dropout=0.3, kernel_regularizer=l2(0.01))))
             model6.add(layers.BatchNormalization())
             model6.add(layers.Flatten())
 
@@ -96,7 +102,7 @@ class Parallel:
             x = layers.Dense(units=train_y.shape[1], activation="softmax")(x)
 
             model = keras.Model(
-                inputs=[model1.input, model2.input, model3.input, model4.input, model5.input, model6.input])
+                inputs=[model1.input, model2.input, model3.input, model4.input, model5.input, model6.input], outputs=x)
             model.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
             self.model = model
 
@@ -105,12 +111,12 @@ class Parallel:
         if model_file is not None:
             model_checkpoint = ModelCheckpoint(model_file, monitor="val_loss", mode="min", save_best_only=True)
 
-        self.history = self.model.fit(x=[train_x_MFCC, train_x_embedding, train_x_spectrogram,
-                                         train_x_MFCC, train_x_embedding, train_x_spectrogram],
+        self.history = self.model.fit(x=[train_x_MFCC, train_x_spectrogram, train_x_embedding,
+                                         train_x_MFCC, train_x_spectrogram, train_x_embedding],
                                       y=train_y,
                                       batch_size=batch_size,
-                                      validation_data=([test_x_MFCC, test_x_embedding, test_x_spectrogram,
-                                                        test_x_MFCC, test_x_embedding, test_x_spectrogram], test_y),
+                                      validation_data=([test_x_MFCC, test_x_spectrogram, test_x_embedding,
+                                                        test_x_MFCC, test_x_spectrogram, test_x_embedding], test_y),
                                       validation_batch_size=batch_size,
                                       epochs=epochs,
                                       steps_per_epoch=steps_per_epoch,
