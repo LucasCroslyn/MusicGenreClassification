@@ -1,6 +1,6 @@
+import numpy as np
 import keras
 import keras.layers as layers
-import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 
@@ -23,19 +23,33 @@ class CNN:
                     epochs: int = 1,
                     steps_per_epoch: int = 5,
                     batch_size: int = 1,
-                    model_file: str = None) -> None:
+                    model_file: str = None,
+                    feature_type: str = "2d") -> None:
 
         if self.model is None:
             model = keras.Sequential()
-            model.add(layers.Input(shape=(train_x.shape[1], train_x.shape[2], 1)))
-            model.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding="valid"))
-            model.add(layers.BatchNormalization())
-            model.add(layers.MaxPooling2D())
-            model.add(layers.Dropout(0.3))
-            model.add(layers.Conv2D(filters=128, kernel_size=(3, 3), activation='relu', padding='valid'))
-            model.add(layers.BatchNormalization())
-            model.add(layers.MaxPooling2D())
-            model.add(layers.Dropout(0.3))
+            if feature_type == "2d":
+                model.add(layers.Input(shape=(train_x.shape[1], train_x.shape[2], 1)))
+                model.add(layers.Conv2D(32, (3, 3), activation='relu', padding="same"))
+                model.add(layers.BatchNormalization())
+                model.add(layers.MaxPooling2D())
+                model.add(layers.Dropout(0.3))
+                model.add(layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
+                model.add(layers.BatchNormalization())
+                model.add(layers.MaxPooling2D())
+                model.add(layers.Dropout(0.3))
+                model.add(layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
+                model.add(layers.BatchNormalization())
+                model.add(layers.MaxPooling2D())
+            elif feature_type == "1d":
+                model.add(layers.Input(shape=(train_x.shape[1], train_x.shape[2])))
+                model.add(layers.Conv1D(filters=64, kernel_size=5, activation='relu', padding="same"))
+                model.add(layers.BatchNormalization())
+                model.add(layers.MaxPooling1D())
+                model.add(layers.Dropout(0.3))
+                model.add(layers.Conv1D(filters=128, kernel_size=3, activation='relu', padding='same'))
+                model.add(layers.BatchNormalization())
+                model.add(layers.MaxPooling1D())
             model.add(layers.Flatten())
             model.add(layers.Dense(units=128, activation='relu'))
             model.add(layers.Dense(units=train_y.shape[1], activation="softmax"))
@@ -43,7 +57,7 @@ class CNN:
             model.summary()
             self.model = model
 
-        early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
+        # early_stopping = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=5)
 
         if model_file is not None:
             model_checkpoint = ModelCheckpoint(model_file, monitor='val_loss', mode='min', save_best_only=True)
@@ -56,7 +70,8 @@ class CNN:
                                  steps_per_epoch=steps_per_epoch,
                                  verbose=1,
                                  use_multiprocessing=True,
-                                 callbacks=[early_stopping, model_checkpoint])
+                                #  callbacks=[early_stopping, model_checkpoint])
+                                 callbacks=[model_checkpoint])
 
 
     def evaluate(self, test_x: np.ndarray, test_y: np.ndarray, batch_size: int = 10) -> float:
