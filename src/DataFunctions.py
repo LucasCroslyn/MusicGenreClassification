@@ -10,7 +10,11 @@ from typing import Any
 
 def save_pickle(data: Any, pickle_path: str) -> None:
 	'''
-	
+	Saves the data into a pickled file for compacted storage.
+
+	:param data: The data that should be pickled and saved.
+	:param pickle_path: The file path for where the pickled data should be saved to.
+	:return: Does not return the data that was pickled, just saved it.
 	'''
 	pickle_file = open(pickle_path, "wb")
 	pickle.dump(data, pickle_file)
